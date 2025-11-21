@@ -8,20 +8,24 @@ import {
   Mail, 
   Clock, 
   FileText, 
-  Video,
+  MessageSquare,
   AlertCircle,
   ArrowUpRight,
-  ArrowRight
+  ArrowRight,
+  Send
 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { PatientHistoryModal } from './components/PatientHistoryModal';
 import { CURRENT_DOCTOR, DASHBOARD_STATS, FINANCIAL_STATS, WAITING_LIST } from './constants';
-import { NavigationItem, Priority } from './types';
+import { NavigationItem, Priority, Patient } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavigationItem>('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inviteEmails, setInviteEmails] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const handleInvite = useCallback(() => {
     if (!inviteEmails.trim()) return;
@@ -154,32 +158,44 @@ export default function App() {
               </section>
 
               {/* Invite Patients Section */}
-              <section className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl shadow-md text-white overflow-hidden relative">
+              <section className="lg:col-span-2 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl shadow-md text-white overflow-hidden relative isolate">
                 {/* Background decoration */}
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-teal-900 opacity-10 rounded-full blur-2xl pointer-events-none"></div>
                 
-                <div className="p-8 h-full flex flex-col justify-center">
-                  <h3 className="text-xl font-bold flex items-center gap-2 mb-2">
-                    <Mail className="text-indigo-200" size={24} />
-                    Convidar Pacientes
-                  </h3>
-                  <p className="text-indigo-100 mb-6 max-w-lg">
-                    Envie o link de cadastro para novos pacientes. Separe múltiplos e-mails utilizando vírgula.
+                <div className="p-8 h-full flex flex-col justify-center relative z-10">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-sm">
+                      <Mail className="text-white" size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white">
+                      Convidar Pacientes
+                    </h3>
+                  </div>
+                  
+                  <p className="text-teal-50 mb-6 max-w-lg text-sm leading-relaxed opacity-90 font-medium">
+                    Envie o link de cadastro para novos pacientes. Separe múltiplos e-mails utilizando vírgula para envios em massa.
                   </p>
                   
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <input 
-                      type="text" 
-                      placeholder="exemplo@email.com, paciente@email.com"
-                      value={inviteEmails}
-                      onChange={(e) => setInviteEmails(e.target.value)}
-                      className="flex-1 bg-white/10 border border-white/20 text-white placeholder-indigo-200 rounded-lg px-4 py-3 focus:outline-none focus:bg-white/20 focus:border-white/40 transition-all"
-                    />
+                    <div className="flex-1 relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Mail size={18} className="text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="exemplo@email.com, paciente@email.com"
+                        value={inviteEmails}
+                        onChange={(e) => setInviteEmails(e.target.value)}
+                        className="block w-full pl-11 pr-4 py-3 bg-white border-0 text-slate-900 placeholder-slate-400 rounded-xl shadow-sm focus:ring-2 focus:ring-white/50 focus:outline-none transition-all"
+                      />
+                    </div>
                     <button 
                       onClick={handleInvite}
-                      className="bg-white text-indigo-600 font-bold px-6 py-3 rounded-lg hover:bg-indigo-50 transition-colors shadow-lg"
+                      className="bg-teal-900/80 hover:bg-teal-900 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl backdrop-blur-sm flex items-center justify-center gap-2"
                     >
-                      Enviar Convite
+                      <span>Enviar Convite</span>
+                      <Send size={18} />
                     </button>
                   </div>
                 </div>
@@ -191,7 +207,7 @@ export default function App() {
               <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <Video size={20} className="text-teal-600" />
+                    <MessageSquare size={20} className="text-teal-600" />
                     Fila de Teleorientação
                   </h3>
                   <p className="text-sm text-slate-500">Pacientes aguardando na sala de espera virtual</p>
@@ -257,11 +273,18 @@ export default function App() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-3 mt-2 md:mt-0 self-end md:self-center w-full md:w-auto">
-                        <button className="flex-1 md:flex-none p-2 text-slate-500 hover:bg-slate-200 rounded-lg transition-colors tooltip" title="Ver Prontuário">
+                        <button 
+                          onClick={() => {
+                            setSelectedPatient(patient);
+                            setHistoryModalOpen(true);
+                          }}
+                          className="flex-1 md:flex-none p-2 text-slate-500 hover:bg-slate-200 rounded-lg transition-colors tooltip" 
+                          title="Ver Prontuário"
+                        >
                           <FileText size={20} />
                         </button>
                         <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors font-medium text-sm shadow-sm shadow-teal-200">
-                          <Video size={16} />
+                          <MessageSquare size={16} />
                           <span>Iniciar</span>
                         </button>
                       </div>
@@ -280,6 +303,13 @@ export default function App() {
           </div>
         </main>
       </div>
+      
+      {/* History Modal */}
+      <PatientHistoryModal 
+        patient={selectedPatient} 
+        isOpen={historyModalOpen} 
+        onClose={() => setHistoryModalOpen(false)} 
+      />
     </div>
   );
 }
